@@ -20,6 +20,13 @@ log()  { echo -e "\e[36m[fs25/install]\e[0m $*"; }
 warn() { echo -e "\e[33m[fs25/install] WARN:\e[0m $*"; }
 err()  { echo -e "\e[31m[fs25/install] ERROR:\e[0m $*"; }
 
+source "$(dirname "${BASH_SOURCE[0]}")/install-debug.sh"
+if [ "$DLC_ONLY" -eq 0 ]; then
+    install_debug_init || exit 1
+    trap stop_install_monitor EXIT
+    trap install_interrupted INT TERM
+fi
+
 # ---- Locate / extract the base installer -------------------------------------
 find_installer() {
     # A refresh gets its own release directory; never reuse extracted older media.
@@ -32,17 +39,17 @@ find_installer() {
         release=$(dirname "$selected")
         if [ ! -f "$release/.extracted" ]; then
             log "Extracting selected release..." >&2
-            7z x "$selected" -o"$release" -y -bso0 -bsp0 >&2 || return 1
+            run_install_step extract 7z x "$selected" -o"$release" -y -bso0 -bsp0 >&2 || return 1
             touch "$release/.extracted"
         fi
         [ -f "$release/Setup.exe" ] && { echo "$release/Setup.exe"; return 0; }
         [ -f "$release/FarmingSimulator2025.exe" ] && { echo "$release/FarmingSimulator2025.exe"; return 0; }
         return 1
     fi
-    if [ -f "${INSTALLER_DIR}/FarmingSimulator2025.exe" ]; then
+    if [ ! -f "${INSTALLER_DIR}/.extract-incomplete" ] && [ -f "${INSTALLER_DIR}/FarmingSimulator2025.exe" ]; then
         echo "${INSTALLER_DIR}/FarmingSimulator2025.exe"; return 0
     fi
-    if [ -f "${INSTALLER_DIR}/Setup.exe" ]; then
+    if [ ! -f "${INSTALLER_DIR}/.extract-incomplete" ] && [ -f "${INSTALLER_DIR}/Setup.exe" ]; then
         echo "${INSTALLER_DIR}/Setup.exe"; return 0
     fi
     # Try to extract a distribution image (.img / .zip) once.
@@ -53,9 +60,11 @@ find_installer() {
         # Note: logs go to stderr so they don't pollute the path on stdout that
         # the caller captures via installer="$(find_installer)".
         log "Extracting ${img##*/}..." >&2
-        7z x "$img" -o"${INSTALLER_DIR}" -y -bso0 -bsp0 >&2 || return 1
+        touch "${INSTALLER_DIR}/.extract-incomplete" || return 1
+        run_install_step extract 7z x "$img" -o"${INSTALLER_DIR}" -y -bso0 -bsp0 >&2 || return 1
+        rm -f "${INSTALLER_DIR}/.extract-incomplete"
         # The image is fully extracted now; drop it to reclaim ~21 GB (and lower
-        # peak disk during install). Re-download happens automatically if needed.
+        # peak disk during install). Automatic downloads remain opt-in.
         case "${KEEP_INSTALLER:-true}" in 1|true|yes|on) : ;; *) rm -f "$img" >&2 || true ;; esac
         [ -f "${INSTALLER_DIR}/FarmingSimulator2025.exe" ] && { echo "${INSTALLER_DIR}/FarmingSimulator2025.exe"; return 0; }
         [ -f "${INSTALLER_DIR}/Setup.exe" ] && { echo "${INSTALLER_DIR}/Setup.exe"; return 0; }
@@ -288,20 +297,34 @@ install_dlcs() {
 
 # ---- Base game install --------------------------------------------------------
 if [ "$DLC_ONLY" -eq 0 ]; then
-    installer="$(find_installer)" || {
+    # No command substitution: signal handlers/child PIDs stay in this shell.
+    installer_path="${FS25_INSTALL_RUN}-installer-path.txt"
+    find_installer >"$installer_path" || {
         err "No installer found in ${INSTALLER_DIR}/."
         err "Upload FarmingSimulator2025.exe (or the *_ESD.img / .zip) there and restart."
         exit 1
     }
+    installer=$(cat "$installer_path")
+    touch "${INSTALLER_DIR}/.install-incomplete" || exit 1
     log "Running silent install: ${installer##*/}"
-    wine "$installer" /SILENT /NOCANCEL /NOICONS /SUPPRESSMSGBOXES >/tmp/fs25-setup.log 2>&1 || {
-        err "Silent install failed — see /tmp/fs25-setup.log"
+    setup_log="${FS25_INSTALL_RUN}-setup.log"
+    wine_log="${FS25_INSTALL_RUN}-wine.log"
+    export FS25_WINE_LOG="$wine_log"
+    setup_windows_log=$(winepath -w "$setup_log") || exit 1
+    log "Installer detail log: $setup_log"
+    log "Wine output: $wine_log"
+    run_install_step setup bash -c 'wine "$@" >"$FS25_WINE_LOG" 2>&1' -- \
+        "$installer" /SILENT /NOCANCEL /NOICONS /NORESTART /SUPPRESSMSGBOXES \
+        "/LOG=$setup_windows_log" || {
+        err "Silent install failed. Persistent logs: ${FS25_INSTALL_RUN}-*.log"
+        err "Do not re-upload the IMG. Check disk snapshots and the Wings quota first."
         exit 1
     }
-    [ -f "${GAME_DIR}/dedicatedServer.exe" ] || { err "dedicatedServer.exe missing after install."; exit 1; }
+    base_game_files_present || { err "Required game files missing after install; installation remains incomplete."; exit 1; }
     log "Base game installed."
 
     activate_license || exit 1
+    rm -f "${INSTALLER_DIR}/.install-incomplete"
     cleanup_installer
 fi
 

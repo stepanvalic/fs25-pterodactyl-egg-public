@@ -12,7 +12,7 @@
 #   8. On SIGINT/SIGTERM, shut the server down cleanly.
 set -uo pipefail
 
-FS25_LIB="/opt/fs25/lib"
+FS25_LIB="${FS25_LIB:-/opt/fs25/lib}"
 FS25_CONFIG="/opt/fs25/config"
 
 # ---- Paths (everything persistent lives under /home/container) ----------------
@@ -90,7 +90,8 @@ else
 fi
 
 # ---- 3. Install game on first run ---------------------------------------------
-if [ ! -f "${GAME_DIR}/dedicatedServer.exe" ]; then
+source "${FS25_LIB}/install-debug.sh"
+if [ -f "${INSTALLER_DIR}/.install-incomplete" ] || ! base_game_files_present; then
     log "FS25 not installed yet — running installer..."
     # If no installer was uploaded, fetch it from the official GIANTS portal using
     # the operator's own serial (license-gated; see lib/download-game.sh).
@@ -101,7 +102,7 @@ if [ ! -f "${GAME_DIR}/dedicatedServer.exe" ]; then
     }
     if ! bash "${FS25_LIB}/install-game.sh"; then
         err "Installation failed. Check the log above. The server cannot start."
-        err "Make sure the installer is uploaded to: ${INSTALLER_DIR}/"
+        err "Check data/install-logs and the panel disk limit. Existing media stays in ${INSTALLER_DIR}/."
         exit 1
     fi
 else
