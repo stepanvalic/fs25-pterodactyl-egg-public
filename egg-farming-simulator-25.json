@@ -1,0 +1,221 @@
+{
+    "_comment": "MIT fork of nn-home-com/farming-simulator-25-egg. Contains scripts only, no game files or license keys.",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-09-12T00:00:00+00:00",
+    "name": "FS25 - Stepan Valic",
+    "author": "stepanvalic@users.noreply.github.com",
+    "description": "FS25 dedicated server under WineHQ. Persistent GIANTS panel settings. Manual installer by default; optional cached one-time portal request. Separate licensed copy required.",
+    "features": null,
+    "docker_images": {
+        "FS25 WineHQ (Stepan Valic)": "ghcr.io/stepanvalic/fs25-pterodactyl-egg-public:latest"
+    },
+    "file_denylist": [],
+    "startup": "bash /opt/fs25/start.sh",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\":\"Web manager running.\"}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nset -eu\nmkdir -p /mnt/server/installer /mnt/server/dlc /mnt/server/data/mods\necho \"Upload your licensed installer to installer/. Set WEB_PASSWORD and first-install GAME_SERIAL before starting. See repository README.\"\n",
+            "container": "debian:bookworm-slim",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "CD-Key / Serial",
+            "description": "Your FS25 server CD-key. Used on first boot to download your copy from the official GIANTS portal and to generate the license files. Leave empty only if you upload the installer AND pre-activated *.dat files manually.",
+            "env_variable": "GAME_SERIAL",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64"
+        },
+        {
+            "name": "Auto-download game",
+            "description": "Opt-in: one portal POST per persistent data directory. Cached response reused. Failed requests are not automatically repeated.",
+            "env_variable": "AUTO_DOWNLOAD",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Auto-download DLCs",
+            "description": "Opt-in download of DLCs found in the cached portal response. Upload newly purchased DLC installers manually. Requires AUTO_DOWNLOAD=true.",
+            "env_variable": "DOWNLOAD_DLC",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Keep installer files",
+            "description": "Keep local installation media for reinstalls without another download. Requires sufficient disk space.",
+            "env_variable": "KEEP_INSTALLER",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Server name",
+            "description": "Name shown in the multiplayer server browser. Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "SERVER_NAME",
+            "default_value": "FS25 Server",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:60"
+        },
+        {
+            "name": "Web portal username",
+            "description": "Login for the dedicated-server web management portal.",
+            "env_variable": "WEB_USERNAME",
+            "default_value": "admin",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:32"
+        },
+        {
+            "name": "Web portal password",
+            "description": "Required non-default web admin password. Keep private; the web portal uses HTTP.",
+            "env_variable": "WEB_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64"
+        },
+        {
+            "name": "Web portal port",
+            "description": "Port for the admin web management portal. Used internally to auto-start the game session, so it always works even if not exposed. To reach the portal in your browser, add a second allocation and set this to that allocation's port number (default 7999).",
+            "env_variable": "WEB_PORT",
+            "default_value": "7999",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:1024,65535"
+        },
+        {
+            "name": "In-game admin password",
+            "description": "Password to authenticate as admin from within the game. Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "ADMIN_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:16"
+        },
+        {
+            "name": "Game join password",
+            "description": "Password players must enter to join. Leave empty for an open server. Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "GAME_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:16"
+        },
+        {
+            "name": "Max players",
+            "description": "Maximum number of simultaneous players (game supports up to 16). Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "MAX_PLAYERS",
+            "default_value": "12",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:1,16"
+        },
+        {
+            "name": "Map ID",
+            "description": "Map to load, e.g. MapUS, MapFR, MapAlpine, or a mod map id. Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "MAP_ID",
+            "default_value": "MapUS",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64"
+        },
+        {
+            "name": "Language",
+            "description": "Server language code (en, de, fr, ...). Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "SERVER_LANGUAGE",
+            "default_value": "cz",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:5"
+        },
+        {
+            "name": "Crossplay allowed",
+            "description": "Allow crossplay between platforms (true/false). Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "CROSSPLAY",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Pause if empty",
+            "description": "Pause behaviour when no players are connected (0 off, 2 default). Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "PAUSE_IF_EMPTY",
+            "default_value": "2",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:0,2"
+        },
+        {
+            "name": "Savegame index",
+            "description": "Which savegame slot to load/continue (1-based). Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "SAVEGAME_INDEX",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:1,20"
+        },
+        {
+            "name": "Auto-save interval",
+            "description": "Auto-save interval in minutes (float, e.g. 180.000000). Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "AUTO_SAVE_INTERVAL",
+            "default_value": "15.000000",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:16"
+        },
+        {
+            "name": "Stats interval",
+            "description": "Statistics write interval in minutes (float). Initial settings only; subsequent changes belong in the GIANTS web panel.",
+            "env_variable": "STATS_INTERVAL",
+            "default_value": "360.000000",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:16"
+        },
+        {
+            "name": "Regenerate game configuration",
+            "description": "DANGER: true replaces game settings/mod selection from Startup variables at every boot, with backup. Keep false to preserve the GIANTS panel settings.",
+            "env_variable": "REGENERATE_CONFIG",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Installer version policy",
+            "description": "current: keep existing media. latest: fetch the latest installer offered by GIANTS once per refresh ID, keep it in installer/releases, and select it for future fresh installations. Does not upgrade an installed game. Requires AUTO_DOWNLOAD=true.",
+            "env_variable": "INSTALLER_POLICY",
+            "default_value": "current",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:current,latest"
+        },
+        {
+            "name": "Installer refresh ID",
+            "description": "Change deliberately (e.g. release-2) to authorize ONE new portal request in latest mode. Never use a timestamp that changes on each boot. Reuse the same value on restarts. Do not change after a failed request merely to retry it.",
+            "env_variable": "INSTALLER_REFRESH_ID",
+            "default_value": "initial",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64"
+        }
+    ]
+}

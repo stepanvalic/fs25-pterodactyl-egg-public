@@ -1,0 +1,23 @@
+# Local test artifacts
+*.log
+/tmp/
+
+# Never commit game files or licenses
+installer/
+dlc/
+*.exe
+*.img
+*.dat
+*.zip
+*.bin
+*.iso
+*.key
+*.pem
+.env
+*.env
+data/
+runtime/
+.fs25prefix/
+.download-state/
+backups/
+ACCESS.txt

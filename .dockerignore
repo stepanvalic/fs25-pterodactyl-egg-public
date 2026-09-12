@@ -1,0 +1,12 @@
+.git
+**/*.img
+**/*.exe
+**/*.bin
+**/*.dat
+**/*.zip
+**/*.env
+**/*.key
+runtime
+data
+installer
+dlc
