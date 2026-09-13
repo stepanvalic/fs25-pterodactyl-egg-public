@@ -14,7 +14,8 @@ function fixture(t) {
     DLC_DIR: `${dir}/dlc`, KEEP_INSTALLER: 'true', PATH: `${dir}/bin:${process.env.PATH}`};
   for (const p of [env.INSTALLER_DIR, env.GAME_DIR, env.DATA_DIR, env.DLC_DIR, `${dir}/bin`]) fs.mkdirSync(p, {recursive: true});
   fs.writeFileSync(`${env.INSTALLER_DIR}/Setup.exe`, 'fixture');
-  fs.writeFileSync(`${env.DOCS_DIR}/fixture.dat`, 'fixture');
+  fs.writeFileSync(`${env.DOCS_DIR}/AHT_test.dat`, 'fixture');
+  fs.writeFileSync(`${env.DOCS_DIR}/AHC_test.dat`, 'fixture');
   fs.writeFileSync(`${dir}/bin/winepath`, '#!/bin/bash\nprintf "%s\\n" "$2"\n', {mode: 0o755});
   fs.writeFileSync(`${dir}/bin/wine`, `#!/bin/bash
 echo fixture-wine-output
@@ -57,6 +58,28 @@ test('dedicatedServer.exe alone is not a complete legacy installation', t => {
   fs.writeFileSync(`${env.GAME_DIR}/dedicatedServer.exe`, 'partial');
   const r = spawnSync('bash', ['-c', 'source "$1"; base_game_files_present', '--', `${root}/yolk/lib/install-debug.sh`], {env});
   assert.notEqual(r.status, 0);
+});
+
+test('process PID file is not a license and activation-only does not reinstall', t => {
+  const {env} = fixture(t);
+  fs.unlinkSync(`${env.DOCS_DIR}/AHT_test.dat`);
+  fs.unlinkSync(`${env.DOCS_DIR}/AHC_test.dat`);
+  fs.writeFileSync(`${env.DOCS_DIR}/serverProcessId.dat`, '1234');
+  const r = spawnSync('bash', [`${root}/yolk/lib/install-game.sh`, '--activate-only'],
+    {env: {...env, GAME_SERIAL: ''}, encoding: 'utf8', timeout: 5000});
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /GAME_SERIAL is empty/);
+  assert.ok(!fs.existsSync(`${env.GAME_DIR}/dedicatedServer.exe`));
+});
+
+test('license requires a nonempty matching pair', t => {
+  const {env} = fixture(t);
+  const check = () => spawnSync('bash', ['-c', 'source "$1"; license_files_present', '--', `${root}/yolk/lib/install-debug.sh`], {env}).status;
+  assert.equal(check(), 0);
+  fs.truncateSync(`${env.DOCS_DIR}/AHC_test.dat`);
+  assert.notEqual(check(), 0);
+  fs.writeFileSync(`${env.DOCS_DIR}/AHC_other.dat`, 'fixture');
+  assert.notEqual(check(), 0);
 });
 
 test('interrupted extraction is retried instead of using partial Setup.exe', t => {

@@ -21,7 +21,7 @@ warn() { echo -e "\e[33m[fs25/install] WARN:\e[0m $*"; }
 err()  { echo -e "\e[31m[fs25/install] ERROR:\e[0m $*"; }
 
 source "$(dirname "${BASH_SOURCE[0]}")/install-debug.sh"
-if [ "$DLC_ONLY" -eq 0 ]; then
+if [ "$DLC_ONLY" -eq 0 ] && [ "${1:-}" != "--activate-only" ]; then
     install_debug_init || exit 1
     trap stop_install_monitor EXIT
     trap install_interrupted INT TERM
@@ -93,7 +93,7 @@ cleanup_installer() {
 # There is no documented CLI for this, so we drive the dialog with xdotool.
 # This is best-effort and may need tuning against the real dialog layout.
 activate_license() {
-    if ls "${DOCS_DIR}"/*.dat >/dev/null 2>&1; then
+    if license_files_present; then
         log "License files already present, skipping activation."
         return 0
     fi
@@ -113,7 +113,12 @@ activate_license() {
     local serial_clean
     serial_clean=$(printf '%s' "${GAME_SERIAL}" | tr -d '[:space:]-')
 
-    wine "${GAME_DIR}/FarmingSimulator2025.exe" >/tmp/fs25-activate.log 2>&1 &
+    local activation_dir="${DATA_DIR:-$DOCS_DIR}/install-logs"
+    mkdir -p "$activation_dir" || return 1
+    chmod 700 "$activation_dir"
+    local activation_log="$activation_dir/$(date -u +%Y%m%dT%H%M%SZ)-$$-activation.log"
+    log "Activation output: $activation_log"
+    (umask 077; exec wine "${GAME_DIR}/FarmingSimulator2025.exe" >"$activation_log" 2>&1) &
     local game_pid=$!
     sleep 30  # give the activation dialog time to render
 
@@ -127,7 +132,7 @@ activate_license() {
     local ok=0
     for _ in $(seq 1 12); do
         sleep 5
-        if ls "${DOCS_DIR}"/*.dat >/dev/null 2>&1; then ok=1; break; fi
+        if license_files_present; then ok=1; break; fi
     done
 
     # After activation the launcher tries to start the 3D game and shows a GPU
@@ -296,6 +301,11 @@ install_dlcs() {
 }
 
 # ---- Base game install --------------------------------------------------------
+if [ "${1:-}" = "--activate-only" ]; then
+    activate_license
+    exit $?
+fi
+
 if [ "$DLC_ONLY" -eq 0 ]; then
     # No command substitution: signal handlers/child PIDs stay in this shell.
     installer_path="${FS25_INSTALL_RUN}-installer-path.txt"

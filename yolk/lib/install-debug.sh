@@ -87,3 +87,14 @@ base_game_files_present() {
     [ -s "${GAME_DIR}/x64/FarmingSimulator2025Game.exe" ] &&
     [ -s "${GAME_DIR}/dataS.gar" ]
 }
+
+# Presence only; GIANTS still validates the license at runtime.
+license_files_present() {
+    local token suffix
+    for token in "${DOCS_DIR}"/AHT_*.dat; do
+        [ -s "$token" ] || continue
+        suffix=${token##*/AHT_}
+        [ -s "${DOCS_DIR}/AHC_${suffix}" ] && return 0
+    done
+    return 1
+}

@@ -107,6 +107,10 @@ if [ -f "${INSTALLER_DIR}/.install-incomplete" ] || ! base_game_files_present; t
     fi
 else
     log "FS25 already installed."
+    bash "${FS25_LIB}/install-game.sh" --activate-only || {
+        err "License activation is incomplete. See data/install-logs; no reinstall is required."
+        exit 1
+    }
     # Fetch DLCs the licence covers but that are not here yet, then install any
     # DLC sitting in the upload folder. Without the fetch, DOWNLOAD_DLC=true did
     # nothing on an existing server — the portal was only ever queried during the
