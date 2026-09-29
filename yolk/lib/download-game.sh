@@ -177,7 +177,11 @@ download() {
 }
 
 # ---- 3. Download the base game -----------------------------------------------
-if [ "$DLC_ONLY" -eq 0 ] || [ "$POLICY" = latest ]; then
+# A finished release is final: with DOWNLOAD_DLC on, later boots still get here
+# and must not fetch the ~20 GB image again.
+if [ "$POLICY" = latest ] && [ -f "$STATE_DIR/base-complete" ]; then
+    log "Base game: release for this refresh ID already downloaded."
+elif [ "$DLC_ONLY" -eq 0 ] || [ "$POLICY" = latest ]; then
     IMG_DEST="${INSTALLER_DIR}/${IMG_URL##*/}"
     if [ "$POLICY" = latest ]; then
         mkdir -p "${INSTALLER_DIR}/releases/${REQUEST_ID}"

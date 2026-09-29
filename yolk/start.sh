@@ -4,7 +4,8 @@
 #   1. Bring up a virtual X display (Wine needs one even headless).
 #   2. Initialise the Wine prefix on first run.
 #   3. If the game is not installed yet, run the silent installer + DLCs and the
-#      one-time CD-key activation (see lib/install-game.sh).
+#      one-time CD-key activation (see lib/install-game.sh). With FORCE_UPDATE,
+#      install the latest official release over an existing game once.
 #   4. Render the two config XMLs from the environment variables.
 #   5. Launch dedicatedServer.exe (the web control portal on $WEB_PORT).
 #   6. Ask the web portal to start the actual game session.
@@ -91,6 +92,16 @@ fi
 
 # ---- 3. Install game on first run ---------------------------------------------
 source "${FS25_LIB}/install-debug.sh"
+
+# FORCE_UPDATE: one-shot upgrade of an installed game to the installer the GIANTS
+# portal currently offers. It reuses the INSTALLER_POLICY=latest machinery, so the
+# key is POSTed at most once per INSTALLER_REFRESH_ID and a release that has
+# already been installed is never installed again, even if the flag stays on.
+FORCE_UPDATE_ENABLED=0
+case "${FORCE_UPDATE:-false}" in
+    1|true|yes|on) FORCE_UPDATE_ENABLED=1; export INSTALLER_POLICY=latest ;;
+esac
+
 if [ -f "${INSTALLER_DIR}/.install-incomplete" ] || ! base_game_files_present; then
     log "FS25 not installed yet — running installer..."
     # If no installer was uploaded, fetch it from the official GIANTS portal using
@@ -111,12 +122,26 @@ else
         err "License activation is incomplete. See data/install-logs; no reinstall is required."
         exit 1
     }
-    # Fetch DLCs the licence covers but that are not here yet, then install any
-    # DLC sitting in the upload folder. Without the fetch, DOWNLOAD_DLC=true did
-    # nothing on an existing server — the portal was only ever queried during the
-    # very first install. Both steps are best-effort: a DLC must never stop the
-    # server from coming up.
-    bash "${FS25_LIB}/download-game.sh" --dlc-only || warn "DLC download reported problems (continuing)."
+    if [ "$FORCE_UPDATE_ENABLED" -eq 1 ]; then
+        log "FORCE_UPDATE enabled — updating to the installer currently offered by GIANTS (refresh ID ${INSTALLER_REFRESH_ID:-initial})..."
+        bash "${FS25_LIB}/download-game.sh" || {
+            err "Update download failed. The installed game was not touched."
+            err "Fix the cause, or set FORCE_UPDATE=false to start the current version."
+            exit 1
+        }
+        if ! bash "${FS25_LIB}/install-game.sh" --update; then
+            err "Update failed. Savegames, mods and license files were not touched."
+            err "Check data/install-logs; the next start retries from the downloaded release."
+            exit 1
+        fi
+    else
+        # Fetch DLCs the licence covers but that are not here yet. Without the
+        # fetch, DOWNLOAD_DLC=true did nothing on an existing server — the portal
+        # was only ever queried during the very first install. Best-effort: a DLC
+        # must never stop the server from coming up.
+        bash "${FS25_LIB}/download-game.sh" --dlc-only || warn "DLC download reported problems (continuing)."
+    fi
+    # Install any DLC sitting in the upload folder (best-effort as well).
     bash "${FS25_LIB}/install-game.sh" --dlc-only || warn "DLC pass reported problems (continuing)."
 fi
 

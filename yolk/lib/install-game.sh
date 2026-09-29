@@ -3,7 +3,8 @@
 #
 # Expects (exported by start.sh): WINEPREFIX, GAME_DIR, DOCS_DIR, INSTALLER_DIR,
 # DLC_DIR, FS25_CONFIG. With --dlc-only it skips the base game install and only
-# processes newly uploaded DLCs.
+# processes newly uploaded DLCs. With --update it installs the selected release
+# over an existing game, once per release.
 #
 # POLICY: This script runs the unmodified GIANTS installer and its online
 # activation. It must NEVER patch binaries, block/redirect GIANTS activation
@@ -13,12 +14,33 @@ set -uo pipefail
 
 DLC_ONLY=0
 [ "${1:-}" = "--dlc-only" ] && DLC_ONLY=1
+# --update: run the selected release's installer over an existing game (FORCE_UPDATE).
+UPDATE=0
+[ "${1:-}" = "--update" ] && UPDATE=1
 
 DLC_PREFIX="FarmingSimulator25_"
 
 log()  { echo -e "\e[36m[fs25/install]\e[0m $*"; }
 warn() { echo -e "\e[33m[fs25/install] WARN:\e[0m $*"; }
 err()  { echo -e "\e[31m[fs25/install] ERROR:\e[0m $*"; }
+
+# A release directory gets an .installed marker once its installer succeeded, so
+# an update runs exactly once per release even if FORCE_UPDATE stays enabled.
+if [ "$UPDATE" -eq 1 ]; then
+    if [ ! -f "${INSTALLER_DIR}/selected-installer" ]; then
+        err "FORCE_UPDATE: no downloaded release to install."
+        err "It needs AUTO_DOWNLOAD=true and GAME_SERIAL."
+        exit 1
+    fi
+    release_dir="${INSTALLER_DIR}/$(dirname "$(cat "${INSTALLER_DIR}/selected-installer")")"
+    if [ -f "$release_dir/.installed" ]; then
+        log "Selected release is already installed — nothing to update."
+        log "Set FORCE_UPDATE=false, or change INSTALLER_REFRESH_ID to fetch a newer release."
+        exit 0
+    fi
+    log "Installing the selected release over the existing game."
+    log "Savegames, mods and license files are not touched."
+fi
 
 source "$(dirname "${BASH_SOURCE[0]}")/install-debug.sh"
 if [ "$DLC_ONLY" -eq 0 ] && [ "${1:-}" != "--activate-only" ]; then
@@ -335,6 +357,8 @@ if [ "$DLC_ONLY" -eq 0 ]; then
 
     activate_license || exit 1
     rm -f "${INSTALLER_DIR}/.install-incomplete"
+    # find_installer only uses the selected release while selected-installer exists.
+    [ -f "${INSTALLER_DIR}/selected-installer" ] && touch "$(dirname "$installer")/.installed"
     cleanup_installer
 fi
 

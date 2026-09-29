@@ -66,3 +66,13 @@ test('interrupted CDN download reuses cached response without the serial', t => 
   assert.equal(run({...env, GAME_SERIAL: ''}).status, 0);
   assert.equal(calls(env), 5);
 });
+test('finished latest release is not downloaded again when DLCs are enabled', t => {
+  const {env} = fixture(t);
+  env.DOWNLOAD_DLC = 'true';
+  assert.equal(run(env).status, 0);
+  assert.equal(calls(env), 3);
+  const again = run(env);
+  assert.equal(again.status, 0, again.stderr + again.stdout);
+  assert.match(again.stdout, /already downloaded/);
+  assert.equal(calls(env), 3);
+});

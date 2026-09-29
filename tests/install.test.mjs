@@ -93,3 +93,30 @@ test('interrupted extraction is retried instead of using partial Setup.exe', t =
   assert.ok(fs.existsSync(`${env.INSTALLER_DIR}/.extract-incomplete`));
   assert.ok(!fs.existsSync(`${env.GAME_DIR}/dedicatedServer.exe`));
 });
+
+test('update installs the selected release once over an existing game', t => {
+  const {env, dir} = fixture(t);
+  const release = `${env.INSTALLER_DIR}/releases/r1`;
+  fs.mkdirSync(release, {recursive: true});
+  for (const f of ['FarmingSimulator25_test_ESD.img', 'Setup.exe', '.extracted']) fs.writeFileSync(`${release}/${f}`, 'fixture');
+  fs.writeFileSync(`${env.INSTALLER_DIR}/selected-installer`, 'releases/r1/FarmingSimulator25_test_ESD.img\n');
+  fs.writeFileSync(`${dir}/bin/wine`, `#!/bin/bash\necho "$1" >> "${dir}/wine-calls"\n` +
+    fs.readFileSync(`${dir}/bin/wine`, 'utf8').replace('#!/bin/bash\n', ''), {mode: 0o755});
+  const update = () => spawnSync('bash', [`${root}/yolk/lib/install-game.sh`, '--update'], {env, encoding: 'utf8', timeout: 15000});
+  const first = update();
+  assert.equal(first.status, 0, first.stderr);
+  assert.ok(fs.existsSync(`${release}/.installed`));
+  assert.match(fs.readFileSync(`${dir}/wine-calls`, 'utf8'), /releases\/r1\/Setup\.exe/);
+  const second = update();
+  assert.equal(second.status, 0, second.stderr);
+  assert.match(second.stdout, /already installed/);
+  assert.equal(fs.readFileSync(`${dir}/wine-calls`, 'utf8').trim().split('\n').length, 1);
+});
+
+test('update without a downloaded release fails without touching the game', t => {
+  const {env} = fixture(t);
+  const r = spawnSync('bash', [`${root}/yolk/lib/install-game.sh`, '--update'], {env, encoding: 'utf8', timeout: 5000});
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /no downloaded release/);
+  assert.ok(!fs.existsSync(`${env.GAME_DIR}/dedicatedServer.exe`));
+});

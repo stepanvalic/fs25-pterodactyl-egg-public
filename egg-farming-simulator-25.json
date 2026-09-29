@@ -47,6 +47,15 @@
             "rules": "required|string|in:true,false"
         },
         {
+            "name": "Force game update",
+            "description": "One-shot update of an installed game: fetches the installer currently offered by GIANTS (like INSTALLER_POLICY=latest, one key request per INSTALLER_REFRESH_ID) and runs it over the existing installation. Savegames, mods and license files are kept. Requires AUTO_DOWNLOAD=true. A release is installed only once; for a later update change INSTALLER_REFRESH_ID. Set back to false afterwards.",
+            "env_variable": "FORCE_UPDATE",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
             "name": "Auto-download DLCs",
             "description": "Opt-in download of DLCs found in the cached portal response. Upload newly purchased DLC installers manually. Requires AUTO_DOWNLOAD=true.",
             "env_variable": "DOWNLOAD_DLC",
@@ -201,7 +210,7 @@
         },
         {
             "name": "Installer version policy",
-            "description": "current: keep existing media. latest: fetch the latest installer offered by GIANTS once per refresh ID, keep it in installer/releases, and select it for future fresh installations. Does not upgrade an installed game. Requires AUTO_DOWNLOAD=true.",
+            "description": "current: keep existing media. latest: fetch the latest installer offered by GIANTS once per refresh ID, keep it in installer/releases, and select it for future fresh installations. Does not upgrade an installed game (use FORCE_UPDATE for that). Requires AUTO_DOWNLOAD=true.",
             "env_variable": "INSTALLER_POLICY",
             "default_value": "current",
             "user_viewable": true,

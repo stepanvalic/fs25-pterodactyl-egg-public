@@ -27,11 +27,22 @@ Nastav `AUTO_DOWNLOAD=true`, `INSTALLER_POLICY=latest`, `INSTALLER_REFRESH_ID=re
 
 Po dokonceni zustane instalator a SHA256 v `installer/releases/<hash-identifikatoru>/`. Soubor `installer/selected-installer` vybira tuto verzi pro budouci cerstvou instalaci. Starsi soubory se neprepisuji. Dalsi restarty se stejnym ID a vypnutym DOWNLOAD_DLC neprovadeji ani kontrolu CDN.
 
-Pro dalsi vyzadany refresh zmen ID na `release-2`. Nemen ho automaticky pri kazdem startu. Po dokonceni muzes AUTO_DOWNLOAD zase vypnout. Nedojde k automaticke reinstalaci ani upgradu bezici hry. "Nejnovejsi" znamena instalator aktualne nabizeny oficialnim portalem; nemusi obsahovat posledni herni patch.
+Pro dalsi vyzadany refresh zmen ID na `release-2`. Nemen ho automaticky pri kazdem startu. Po dokonceni muzes AUTO_DOWNLOAD zase vypnout. Bez FORCE_UPDATE nedojde k automaticke reinstalaci ani upgradu bezici hry. "Nejnovejsi" znamena instalator aktualne nabizeny oficialnim portalem; nemusi obsahovat posledni herni patch.
 
 Pokud selze samotny POST, ochrana dalsi pokus zablokuje. Nahraj instalator rucne; nemaz ochranu jen kvuli opakovanemu zkouseni. Cache je soukroma a muze obsahovat licencovane odkazy, nepatri do Gitu. Je vazana na tento server a licenci; nesdilej ji mezi ruznymi licencemi.
 
 KEEP_INSTALLER=true ponechava instalacni media. U explicitnich refreshu se archivovane releases ponechavaji i pri false, aby se nezrusila zvolena verze; starsi releases lze odstranit rucne po overeni zalohy. Pocatej s prostorem pro IMG, rozbaleny instalator, nainstalovanou hru, mody i zalohy. Kazdy dalsi refresh potrebuje dalsi misto.
+
+### Aktualizace nainstalovane hry (FORCE_UPDATE)
+
+1. Uloz hru, zastav server a zazalohuj `data/` (hlavne `data/savegameN/`).
+2. Nastav `AUTO_DOWNLOAD=true`, `FORCE_UPDATE=true`, platny GAME_SERIAL a nove `INSTALLER_REFRESH_ID` (napr. `update-2026-09`).
+3. Spust server. Stahne se instalator aktualne nabizeny portalem (stejne jako `INSTALLER_POLICY=latest`, jeden POST klice na ID) a spusti se tichy GIANTS instalator nad existujici instalaci. Ulozene hry, mody, konfigurace ani licencni `*.dat` se nemazou.
+4. Po uspesne aktualizaci vrat `FORCE_UPDATE=false`.
+
+Kazdy release se nainstaluje jen jednou (znacka `.installed` v `installer/releases/<hash>/`), takze zapomenute `FORCE_UPDATE=true` nestahuje ani neinstaluje nic znovu. Dalsi aktualizace vyzaduje nove INSTALLER_REFRESH_ID. Starsi instalacni media v `installer/` aktualizaci neblokuji; pri KEEP_INSTALLER=false se po uspesne instalaci smazou. Selhani stahovani necha hru netknutou a server nespusti; preruseny instalator se pri dalsim startu zopakuje z jiz stazeneho release.
+
+Novy image sestavuje GitHub Actions pri pushi do `main`. Na Wings je treba pred aktualizaci stahnout novy `:latest` (nebo prepnout na tag commitu).
 
 ## Sprava a restarty
 
