@@ -48,7 +48,7 @@
         },
         {
             "name": "Force game update",
-            "description": "One-shot update of an installed game: fetches the installer currently offered by GIANTS (like INSTALLER_POLICY=latest, one key request per INSTALLER_REFRESH_ID) and runs it over the existing installation. Savegames, mods and license files are kept. Requires AUTO_DOWNLOAD=true. A release is installed only once; for a later update change INSTALLER_REFRESH_ID. Set back to false afterwards.",
+            "description": "One-shot update switch: turn on and restart to download the installer currently offered by GIANTS (one key request) and install it over the existing game. The data/ folder (savegames, mods, config, license files) is not touched. Requires AUTO_DOWNLOAD=true. Staying on does not update again; turn off afterwards. For a later update, start once with it off, then turn it on.",
             "env_variable": "FORCE_UPDATE",
             "default_value": "false",
             "user_viewable": true,
@@ -219,7 +219,7 @@
         },
         {
             "name": "Installer refresh ID",
-            "description": "Change deliberately (e.g. release-2) to authorize ONE new portal request in latest mode. Never use a timestamp that changes on each boot. Reuse the same value on restarts. Do not change after a failed request merely to retry it.",
+            "description": "Change deliberately (e.g. release-2) to authorize ONE new portal request in latest mode. Never use a timestamp that changes on each boot. Reuse the same value on restarts. Do not change after a failed request merely to retry it. Not used by FORCE_UPDATE.",
             "env_variable": "INSTALLER_REFRESH_ID",
             "default_value": "initial",
             "user_viewable": true,

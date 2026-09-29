@@ -94,13 +94,10 @@ fi
 source "${FS25_LIB}/install-debug.sh"
 
 # FORCE_UPDATE: one-shot upgrade of an installed game to the installer the GIANTS
-# portal currently offers. It reuses the INSTALLER_POLICY=latest machinery, so the
-# key is POSTed at most once per INSTALLER_REFRESH_ID and a release that has
-# already been installed is never installed again, even if the flag stays on.
-FORCE_UPDATE_ENABLED=0
-case "${FORCE_UPDATE:-false}" in
-    1|true|yes|on) FORCE_UPDATE_ENABLED=1; export INSTALLER_POLICY=latest ;;
-esac
+# portal currently offers, requested by switching the panel toggle on.
+source "${FS25_LIB}/force-update.sh"
+force_update_prepare || { err "Cannot write ${DATA_DIR}/.download-state."; exit 1; }
+[ "$FORCE_UPDATE_NEW" -eq 1 ] && log "FORCE_UPDATE switched on — new update request ${INSTALLER_REFRESH_ID}."
 
 if [ -f "${INSTALLER_DIR}/.install-incomplete" ] || ! base_game_files_present; then
     log "FS25 not installed yet — running installer..."
@@ -123,7 +120,7 @@ else
         exit 1
     }
     if [ "$FORCE_UPDATE_ENABLED" -eq 1 ]; then
-        log "FORCE_UPDATE enabled — updating to the installer currently offered by GIANTS (refresh ID ${INSTALLER_REFRESH_ID:-initial})..."
+        log "FORCE_UPDATE enabled — updating to the installer currently offered by GIANTS (request ${INSTALLER_REFRESH_ID})..."
         bash "${FS25_LIB}/download-game.sh" || {
             err "Update download failed. The installed game was not touched."
             err "Fix the cause, or set FORCE_UPDATE=false to start the current version."

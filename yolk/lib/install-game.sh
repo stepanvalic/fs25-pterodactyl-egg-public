@@ -34,8 +34,8 @@ if [ "$UPDATE" -eq 1 ]; then
     fi
     release_dir="${INSTALLER_DIR}/$(dirname "$(cat "${INSTALLER_DIR}/selected-installer")")"
     if [ -f "$release_dir/.installed" ]; then
-        log "Selected release is already installed — nothing to update."
-        log "Set FORCE_UPDATE=false, or change INSTALLER_REFRESH_ID to fetch a newer release."
+        log "This update request is already installed — nothing to do."
+        log "Switch FORCE_UPDATE off. For a later update, start once with it off, then switch it on."
         exit 0
     fi
     log "Installing the selected release over the existing game."
@@ -360,6 +360,7 @@ if [ "$DLC_ONLY" -eq 0 ]; then
     # find_installer only uses the selected release while selected-installer exists.
     [ -f "${INSTALLER_DIR}/selected-installer" ] && touch "$(dirname "$installer")/.installed"
     cleanup_installer
+    [ "$UPDATE" -eq 1 ] && log "Update finished. Switch FORCE_UPDATE off in the panel."
 fi
 
 install_dlcs

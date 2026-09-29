@@ -35,12 +35,14 @@ KEEP_INSTALLER=true ponechava instalacni media. U explicitnich refreshu se archi
 
 ### Aktualizace nainstalovane hry (FORCE_UPDATE)
 
-1. Uloz hru, zastav server a zazalohuj `data/` (hlavne `data/savegameN/`).
-2. Nastav `AUTO_DOWNLOAD=true`, `FORCE_UPDATE=true`, platny GAME_SERIAL a nove `INSTALLER_REFRESH_ID` (napr. `update-2026-09`).
-3. Spust server. Stahne se instalator aktualne nabizeny portalem (stejne jako `INSTALLER_POLICY=latest`, jeden POST klice na ID) a spusti se tichy GIANTS instalator nad existujici instalaci. Ulozene hry, mody, konfigurace ani licencni `*.dat` se nemazou.
-4. Po uspesne aktualizaci vrat `FORCE_UPDATE=false`.
+V panelu v zalozce Startup je `Force game update` prepinac. Aktualizace je jednorazova akce:
 
-Kazdy release se nainstaluje jen jednou (znacka `.installed` v `installer/releases/<hash>/`), takze zapomenute `FORCE_UPDATE=true` nestahuje ani neinstaluje nic znovu. Dalsi aktualizace vyzaduje nove INSTALLER_REFRESH_ID. Starsi instalacni media v `installer/` aktualizaci neblokuji; pri KEEP_INSTALLER=false se po uspesne instalaci smazou. Selhani stahovani necha hru netknutou a server nespusti; preruseny instalator se pri dalsim startu zopakuje z jiz stazeneho release.
+1. Uloz hru a pro jistotu zazalohuj `data/` (hlavne `data/savegameN/`).
+2. Over `AUTO_DOWNLOAD=true` a platny GAME_SERIAL, zapni `Force game update` a restartuj server.
+3. Stahne se instalator aktualne nabizeny portalem (jeden POST klice na jedno zapnuti) a spusti se tichy GIANTS instalator nad existujici instalaci. Slozka `data/` (ulozene hry, mody, konfigurace, licencni `*.dat`) se nemaze ani neprepisuje; meni se jen soubory hry ve Wine prefixu a media v `installer/`.
+4. Po hlaseni `Update finished` prepinac vypni.
+
+Zapnuty prepinac pri dalsich restartech nic znovu nestahuje ani neinstaluje. Novou aktualizaci vyzada az dalsi zapnuti: server musi aspon jednou nastartovat s vypnutym prepinacem (stav se pamatuje v `data/.download-state/`), pak ho zase zapni a restartuj. INSTALLER_REFRESH_ID se pro FORCE_UPDATE nepouziva. Starsi instalacni media v `installer/` aktualizaci neblokuji; pri KEEP_INSTALLER=false se po uspesne instalaci smazou. Selhani stahovani necha hru netknutou a server nespusti; preruseny instalator se pri dalsim startu zopakuje z jiz stazeneho release.
 
 Novy image sestavuje GitHub Actions pri pushi do `main`. Na Wings je treba pred aktualizaci stahnout novy `:latest` (nebo prepnout na tag commitu).
 
